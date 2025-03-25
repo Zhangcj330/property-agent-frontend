@@ -1,26 +1,122 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Enhanced grayscale palette with subtle variations */
+  --primary: #ffffff;
+  --primary-dark: #f0f0f0;
+  --secondary: #f8f9fc;
+  --secondary-dark: #ebedf2;
+  --accent: #000000;
+  --accent-light: #1A1C22;
+  --accent-lighter: #21242c;
+  --slate-900: #21242c;
+  --slate-950: #1c1f26;
+  --neutral-100: #f5f5f5;
+  --neutral-200: #e5e5e5;
+  --neutral-300: #d4d4d4;
+  --neutral-400: #a3a3a3;
+  --neutral-500: #737373;
+  --neutral-600: #525252;
+  --neutral-700: #404040;
+  --neutral-800: #262626;
+  --neutral-900: #171717;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Dark mode adjustments */
+.dark {
+  --primary: #000000;
+  --primary-dark: #0a0a0a;
+  --secondary: #121212;
+  --secondary-dark: #1a1a1a;
+  --accent: #ffffff;
+  --accent-light: #f8f9fc;
+  --accent-lighter: #ebedf2;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    @apply bg-secondary dark:bg-slate-900 text-black dark:text-white;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  .btn {
+    @apply px-6 py-3 font-medium rounded-full transition-all duration-200;
+  }
+  
+  /* Modern input field with focus effects */
+  .input {
+    @apply w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent transition-all;
+  }
+  
+  /* Card component with subtle shadow and border */
+  .card {
+    @apply bg-white dark:bg-[#1A1C22] rounded-2xl border border-neutral-100 dark:border-neutral-800 shadow-sm;
+  }
+  
+  /* Modern badge component */
+  .badge {
+    @apply inline-block px-2 py-1 text-xs font-medium rounded-md;
+  }
+  
+  /* Container for chat messages */
+  .chat-container {
+    @apply flex flex-col space-y-4 p-4;
+  }
+  
+  /* User message bubble */
+  .message-user {
+    @apply self-end max-w-[80%] md:max-w-[70%] p-4 bg-gradient-to-br from-neutral-900 to-neutral-800 text-white rounded-2xl rounded-tr-sm;
+  }
+  
+  /* AI message bubble */
+  .message-ai {
+    @apply self-start max-w-[80%] md:max-w-[70%] p-4 bg-white dark:bg-gradient-to-br dark:from-[#21242c] dark:to-[#1A1C22] shadow-sm rounded-2xl rounded-tl-sm border border-neutral-100 dark:border-neutral-800;
+  }
+  
+  /* Premium background gradients */
+  .bg-premium-light {
+    @apply bg-[#f8f9fc];
+  }
+  
+  .bg-premium-slate {
+    @apply bg-gradient-to-br from-[#21242c] via-[#2a2d35] to-[#1A1C22];
+  }
+  
+  .bg-premium-slate-deep {
+    @apply bg-gradient-to-br from-[#1c1f26] via-[#252933] to-[#2D3039];
+  }
+  
+  /* Glass card effect for enhanced visual depth */
+  .glass-card {
+    @apply backdrop-blur-sm bg-white/[0.02] dark:bg-black/[0.02] rounded-3xl border border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.12)];
+  }
+  
+  .glass-card-light {
+    @apply backdrop-blur-sm bg-black/[0.02] dark:bg-white/[0.02] rounded-3xl border border-black/10 dark:border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.08)];
+  }
+  
+  /* Text gradient effects for titles */
+  .text-gradient-light {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-neutral-300;
+  }
+  
+  .text-gradient-dark {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-black via-black to-neutral-700;
+  }
+  
+  .text-gradient-slate {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-[#21242c] to-[#32363F];
+  }
+  
+  /* Subtle texture overlay for depth */
+  .texture-overlay {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
 }

@@ -144,13 +144,14 @@ export default function ChatPage() {
     inputRef.current?.focus();
   }, []);
 
-  // Set chat container height to viewport height minus header/footer
+  // Set chat container height to viewport height minus header
   useEffect(() => {
     const setHeight = () => {
       const vh = window.innerHeight;
-      // Subtract heights of header, input area, and some padding
+      // 调整高度计算方式，确保精确适配，减去导航栏和内边距
       if (chatContainerRef.current) {
-        chatContainerRef.current.style.height = `${vh - 160}px`;
+        // 添加额外的空间来确保没有滚动条
+        chatContainerRef.current.style.height = `calc(${vh}px - 64px - 1px)`;
       }
     };
 
@@ -265,9 +266,9 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#f8f8f8]">
+    <div className="flex flex-col h-[calc(100vh-64px)] bg-[#f8f8f8] overflow-hidden">
       {/* Chat Header */}
-      <header className="bg-white/70 backdrop-blur-xl py-5 px-5 sm:px-8 sticky top-0 z-10 border-b border-gray-100/50">
+      <header className="bg-white/70 backdrop-blur-xl py-5 px-5 sm:px-8 sticky top-0 z-10 border-b border-gray-100/50 flex-shrink-0">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-800 to-black flex items-center justify-center text-white">
@@ -284,10 +285,10 @@ export default function ChatPage() {
       </header>
 
       {/* Chat Container */}
-      <main className="flex-1 flex flex-col max-w-6xl mx-auto w-full px-5 sm:px-8 pb-6 pt-4">
+      <main className="flex-1 flex flex-col max-w-6xl mx-auto w-full px-5 sm:px-8 overflow-hidden">
         <div 
           ref={chatContainerRef}
-          className="overflow-y-auto flex-1 mb-4 px-3 pt-6 pb-2 scroll-smooth"
+          className="overflow-y-auto flex-1 scroll-smooth px-3 pt-6 pb-2"
         >
           <AnimatePresence initial={false}>
             {messages.map((message) => (
@@ -375,7 +376,7 @@ export default function ChatPage() {
       </main>
       
       {/* Input Bar */}
-      <footer className="sticky bottom-0 bg-white/80 backdrop-blur-xl py-5 px-5 sm:px-8 border-t border-gray-100/40">
+      <div className="sticky bottom-0 bg-white/80 backdrop-blur-xl py-5 px-5 sm:px-8 border-t border-gray-100/40 flex-shrink-0">
         <form onSubmit={handleSubmit} className="max-w-6xl mx-auto">
           <div className="flex items-end rounded-[18px] bg-white shadow-[0_2px_15px_rgba(0,0,0,0.03)] overflow-hidden transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.05)] focus-within:shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
             <textarea
@@ -404,7 +405,7 @@ export default function ChatPage() {
             </button>
           </div>
         </form>
-      </footer>
+      </div>
     </div>
   );
 } 

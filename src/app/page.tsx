@@ -7,33 +7,19 @@ import { useRouter } from 'next/navigation';
 import { PaperAirplaneIcon } from '@heroicons/react/24/outline';
 
 export default function Home() {
-  const [input, setInput] = useState('');
-  const [isInputValid, setIsInputValid] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    const isValid = value.trim().length > 0;
-    console.log('Input changed:', { value, isValid });
-    setInput(value);
-    setIsInputValid(isValid);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted:', { input, isInputValid });
-    if (input.trim()) {
-      try {
-        // Encode the input for URL safety
-        const encodedMessage = encodeURIComponent(input.trim());
-        await router.push(`/chat?initial_message=${encodedMessage}`);
-      } catch (error) {
-        console.error('Navigation error:', error);
-      }
-    }
+    if (!searchQuery.trim()) return;
+    
+    // Encode the search query for URL
+    const encodedQuery = encodeURIComponent(searchQuery);
+    router.push(`/chat?initial_message=${encodedQuery}`);
   };
 
-  console.log('Rendering with state:', { input, isInputValid });
+  console.log('Rendering with state:', { searchQuery });
 
   return (
     <div>
@@ -76,7 +62,7 @@ export default function Home() {
             </p>
 
             {/* Chat Input Section */}
-            <form onSubmit={handleSubmit} className="relative">
+            <form onSubmit={handleSearch} className="relative">
               <div className="relative flex items-center group">
                 {/* Enhanced input container with premium glass effect */}
                 <div className="absolute inset-0 bg-gradient-to-r from-white/[0.12] to-white/[0.08] rounded-2xl" style={{ zIndex: 1 }}></div>
@@ -94,13 +80,11 @@ export default function Home() {
                 {/* Enhanced input field */}
                 <input
                   type="text"
-                  value={input}
+                  value={searchQuery}
                   onChange={(e) => {
                     const value = e.target.value;
-                    const isValid = value.trim().length > 0;
-                    console.log('Input changed:', { value, isValid });
-                    setInput(value);
-                    setIsInputValid(isValid);
+                    console.log('Input changed:', { value });
+                    setSearchQuery(value);
                   }}
                   placeholder="Tell me about your dream home..."
                   className="w-full pl-20 pr-36 py-6 bg-transparent text-white placeholder-white/50 text-lg focus:outline-none relative z-10 [-webkit-font-smoothing:antialiased]"
@@ -109,9 +93,9 @@ export default function Home() {
                   role="textbox"
                   aria-haspopup="dialog"
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey && isInputValid) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
-                      handleSubmit(e);
+                      handleSearch(e);
                     }
                   }}
                 />
@@ -123,15 +107,11 @@ export default function Home() {
                 >
                   <button
                     type="button"
-                    disabled={!isInputValid}
                     onClick={(e) => {
-                      console.log('Button clicked:', { isInputValid, input });
+                      console.log('Button clicked:', { searchQuery });
                       e.preventDefault();
                       e.stopPropagation();
-                      if (isInputValid) {
-                        console.log('Submitting form...');
-                        handleSubmit(e);
-                      }
+                      handleSearch(e);
                     }}
                     className={`
                       px-6 py-3 
@@ -140,7 +120,7 @@ export default function Home() {
                       rounded-xl flex items-center gap-2 
                       transition-all duration-200
                       relative
-                      ${isInputValid 
+                      ${searchQuery 
                         ? 'hover:from-[#f8f8f8] hover:to-[#efefef] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:translate-y-[-2px] shadow-[0_0_20px_rgba(255,255,255,0.12)] cursor-pointer'
                         : 'opacity-50'
                       }
@@ -150,10 +130,10 @@ export default function Home() {
                       pointerEvents: 'auto'
                     }}
                   >
-                    <span className={`transition-transform duration-200 ${isInputValid ? 'group-hover:scale-105' : ''}`}>
+                    <span className={`transition-transform duration-200 ${searchQuery ? 'group-hover:scale-105' : ''}`}>
                       Send
                     </span>
-                    <PaperAirplaneIcon className={`w-4 h-4 transform rotate-90 transition-transform duration-200 ${isInputValid ? 'group-hover:scale-105' : ''}`} />
+                    <PaperAirplaneIcon className={`w-4 h-4 transform rotate-90 transition-transform duration-200 ${searchQuery ? 'group-hover:scale-105' : ''}`} />
                   </button>
                 </div>
               </div>

@@ -1,47 +1,22 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PropertyCard from '@/components/molecules/PropertyCard';
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
-import Image from 'next/image';
 
-// Mock property data
-const mockProperties = [
-  {
-    id: 1,
-    title: 'Modern Apartment in Downtown',
-    price: '$2,500/month',
-    bedrooms: 2,
-    bathrooms: 2,
-    area: '1,200 sq ft',
-    location: 'Downtown, City Center',
-    image: '/property-1.jpg',
-    description: 'A beautiful modern apartment in the heart of downtown with stunning city views and high-end finishes.',
-  },
-  {
-    id: 2,
-    title: 'Spacious Family Home',
-    price: '$650,000',
-    bedrooms: 4,
-    bathrooms: 3,
-    area: '2,800 sq ft',
-    location: 'Suburbia, Green Hills',
-    image: '/property-2.jpg',
-    description: 'Perfect for families, this spacious home features a large backyard, modern kitchen, and is located in a great school district.',
-  },
-  {
-    id: 3,
-    title: 'Luxury Penthouse with Terrace',
-    price: '$4,500/month',
-    bedrooms: 3,
-    bathrooms: 3,
-    area: '2,100 sq ft',
-    location: 'Riverside, East End',
-    image: '/property-3.jpg',
-    description: 'Exclusive penthouse with a private terrace, panoramic views, and premium amenities including a gym and pool.',
-  }
-];
+// Property interface
+interface Property {
+  id: number;
+  title: string;
+  price: string;
+  bedrooms: number;
+  bathrooms: number;
+  area: string;
+  location: string;
+  image: string;
+  description: string;
+}
 
 // Message types
 type MessageType = 'user' | 'assistant' | 'property';
@@ -50,89 +25,146 @@ interface Message {
   id: string;
   type: MessageType;
   content: string;
-  property?: typeof mockProperties[0];
-  timestamp: Date;
+  property?: Property;
 }
+
+// API interface
+interface ChatRequest {
+  session_id?: string;
+  user_input: string;
+  preferences?: Record<string, string>;
+  search_params?: Record<string, string>;
+}
+
+interface ChatResponse {
+  session_id: string;
+  response: string;
+  preferences?: Record<string, string>;
+  search_params?: Record<string, string>;
+  is_complete: boolean;
+}
+
+// Client-side only counter for generating unique IDs
+let messageIdCounter = 1;
+
+// Session ID management
+const getOrCreateSessionId = () => {
+  if (typeof window === 'undefined') return null;
+  
+  let sessionId = localStorage.getItem('chat_session_id');
+  if (!sessionId) {
+    // Generate UUID v4
+    sessionId = crypto.randomUUID();
+    localStorage.setItem('chat_session_id', sessionId);
+  }
+  return sessionId;
+};
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: '1',
+      id: '0',
       type: 'assistant',
       content: 'Hello! I\'m your AI property assistant. How can I help you find your dream home today?',
-      timestamp: new Date(),
     },
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [preferences, setPreferences] = useState<Record<string, string>>({});
+  const [searchParams, setSearchParams] = useState<Record<string, string>>({});
   const messageEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const initialMessageProcessedRef = useRef(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
+  // Initialize session ID on mount
+  useEffect(() => {
+    const currentSessionId = getOrCreateSessionId();
+    setSessionId(currentSessionId);
+  }, []);
+
+  // Call API to get response
+  const handleApiCall = useCallback(async (userInput: string) => {
+    setIsLoading(true);
+
+    try {
+      const payload: ChatRequest = {
+        session_id: sessionId!,  // We know it's not null because we initialize it on mount
+        user_input: userInput,
+        preferences: preferences,
+        search_params: searchParams
+      };
+
+      const response = await fetch('http://localhost:8000/api/v1/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      const data: ChatResponse = await response.json();
+      
+      // Save updated preferences and search parameters if provided
+      if (data.preferences) {
+        setPreferences(data.preferences);
+      }
+      if (data.search_params) {
+        setSearchParams(data.search_params);
+      }
+
+      // Add assistant response
+      const assistantMessage: Message = {
+        id: String(messageIdCounter++),
+        type: 'assistant',
+        content: data.response,
+      };
+      
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Error calling API:', error);
+      
+      // Add error message
+      const errorMessage: Message = {
+        id: String(messageIdCounter++),
+        type: 'assistant',
+        content: 'Sorry, I encountered an error while processing your request. Please try again later.',
+      };
+      
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [sessionId, preferences, searchParams]);
 
   // Handle initial message from URL
   useEffect(() => {
+    if (!sessionId) return; // Wait for session ID to be initialized
+    
     const params = new URLSearchParams(window.location.search);
     const initialMessage = params.get('initial_message');
     
     if (initialMessage && !initialMessageProcessedRef.current) {
       initialMessageProcessedRef.current = true;
       const decodedMessage = decodeURIComponent(initialMessage);
+      
       // Add user message
       const userMessage: Message = {
-        id: Date.now().toString(),
+        id: String(messageIdCounter++),
         type: 'user',
         content: decodedMessage,
-        timestamp: new Date(),
       };
       setMessages(prev => [...prev, userMessage]);
       
-      // Simulate AI response
-      setIsLoading(true);
-      setTimeout(() => {
-        // Check if we should recommend a property based on keywords
-        const shouldRecommendProperty = 
-          decodedMessage.toLowerCase().includes('bedroom') || 
-          decodedMessage.toLowerCase().includes('house') || 
-          decodedMessage.toLowerCase().includes('apartment') || 
-          decodedMessage.toLowerCase().includes('property');
-
-        if (shouldRecommendProperty) {
-          // Randomly select a property from mock data
-          const randomIndex = Math.floor(Math.random() * mockProperties.length);
-          const property = mockProperties[randomIndex];
-
-          // Add property message
-          const propertyMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            type: 'property',
-            content: 'Here\'s a property that might interest you:',
-            property,
-            timestamp: new Date(),
-          };
-          setMessages((prev) => [...prev, propertyMessage]);
-
-          // Add follow-up message
-          const followUpMessage: Message = {
-            id: (Date.now() + 2).toString(),
-            type: 'assistant',
-            content: 'What do you think about this property? Is it something you\'re looking for?',
-            timestamp: new Date(),
-          };
-          setMessages((prev) => [...prev, followUpMessage]);
-        } else {
-          const assistantMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            type: 'assistant',
-            content: getRandomResponse(decodedMessage),
-            timestamp: new Date(),
-          };
-          setMessages(prev => [...prev, assistantMessage]);
-        }
-        setIsLoading(false);
-      }, 1000);
+      // Call API
+      handleApiCall(decodedMessage);
     }
-  }, []);
+  }, [handleApiCall, sessionId]); // Add sessionId as dependency
 
   // Auto-scroll to bottom when messages update
   useEffect(() => {
@@ -148,9 +180,7 @@ export default function ChatPage() {
   useEffect(() => {
     const setHeight = () => {
       const vh = window.innerHeight;
-      // 调整高度计算方式，确保精确适配，减去导航栏和内边距
       if (chatContainerRef.current) {
-        // 添加额外的空间来确保没有滚动条
         chatContainerRef.current.style.height = `calc(${vh}px - 64px - 1px)`;
       }
     };
@@ -167,60 +197,17 @@ export default function ChatPage() {
 
     // Add user message
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: String(messageIdCounter++),
       type: 'user',
       content: input,
-      timestamp: new Date(),
     };
     setMessages((prev) => [...prev, userMessage]);
+    
+    const userInput = input;
     setInput('');
-    setIsLoading(true);
-
-    // Simulate response delay
-    setTimeout(() => {
-      // Check if we should recommend a property based on keywords
-      const shouldRecommendProperty = 
-        input.toLowerCase().includes('bedroom') || 
-        input.toLowerCase().includes('house') || 
-        input.toLowerCase().includes('apartment') || 
-        input.toLowerCase().includes('property');
-
-      if (shouldRecommendProperty) {
-        // Randomly select a property from mock data
-        const randomIndex = Math.floor(Math.random() * mockProperties.length);
-        const property = mockProperties[randomIndex];
-
-        // Add property message
-        const propertyMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          type: 'property',
-          content: 'Here\'s a property that might interest you:',
-          property,
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, propertyMessage]);
-
-        // Add follow-up message
-        const followUpMessage: Message = {
-          id: (Date.now() + 2).toString(),
-          type: 'assistant',
-          content: 'What do you think about this property? Is it something you\'re looking for?',
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, followUpMessage]);
-      } else {
-        // Add regular assistant response
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          type: 'assistant',
-          content: getRandomResponse(input),
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
-      }
-      
-      setIsLoading(false);
-    }, 1000);
+    
+    // Call API with user input
+    await handleApiCall(userInput);
   };
 
   // Handle input changes with auto-resize
@@ -240,30 +227,32 @@ export default function ChatPage() {
     
     // Add a response based on the feedback
     const feedbackResponse: Message = {
-      id: Date.now().toString(),
+      id: String(messageIdCounter++),
       type: 'assistant',
       content: liked 
         ? 'Great! I\'ll keep that in mind for future recommendations. Would you like to see more properties like this one?' 
         : 'Thanks for the feedback. Can you tell me what you didn\'t like about it so I can refine my recommendations?',
-      timestamp: new Date(),
     };
     
     setMessages((prev) => [...prev, feedbackResponse]);
   };
 
-  // Get a random response based on input
-  const getRandomResponse = (input: string) => {
-    const responses = [
-      'I understand you\'re looking for a property. Could you tell me more about your preferences?',
-      'What kind of location are you interested in?',
-      'How many bedrooms are you looking for?',
-      'What\'s your budget range for this property?',
-      'Are there any specific amenities you\'d like in your new home?',
-      'Do you prefer a house, apartment, or condo?',
-    ];
+  // Add function to start new chat
+  const startNewChat = useCallback(() => {
+    // Generate new session ID
+    const newSessionId = crypto.randomUUID();
+    localStorage.setItem('chat_session_id', newSessionId);
+    setSessionId(newSessionId);
     
-    return responses[Math.floor(Math.random() * responses.length)];
-  };
+    // Reset chat state
+    setMessages([{
+      id: '0',
+      type: 'assistant',
+      content: 'Hello! I\'m your AI property assistant. How can I help you find your dream home today?',
+    }]);
+    setPreferences({});
+    setSearchParams({});
+  }, []);
 
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] bg-[#f8f8f8] overflow-hidden">
@@ -281,6 +270,13 @@ export default function ChatPage() {
               <p className="text-xs text-gray-500 font-medium">Online • Replies instantly</p>
             </div>
           </div>
+          {/* Add New Chat Button */}
+          <button
+            onClick={startNewChat}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-full shadow-sm hover:bg-gray-50 border border-gray-200 transition-all duration-200 hover:shadow-md"
+          >
+            New Chat
+          </button>
         </div>
       </header>
 
@@ -338,7 +334,6 @@ export default function ChatPage() {
                     </div>
                     {message.type === 'user' && (
                       <div className="w-9 h-9 rounded-full ml-3 overflow-hidden flex-shrink-0 bg-gray-100">
-                        {/* User Avatar - This could be personalized in a real app */}
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-full h-full p-2 text-gray-400">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                         </svg>

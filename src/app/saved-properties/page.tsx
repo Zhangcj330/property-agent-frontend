@@ -9,23 +9,23 @@ const savedProperties = [
   {
     id: 1,
     title: 'Modern Apartment in Downtown',
-    price: '$2,500/month',
+    price: '$1,750,000',
     bedrooms: 2,
     bathrooms: 2,
     area: '1,200 sq ft',
     location: 'Downtown, City Center',
-    image: '/property-1.jpg',
+    image: 'https://view.com.au/viewstatic/images/listing/1-bedroom-apartment-in-bondi-nsw-2026/500-w/16056415-1-62B4D46.jpg',
     description: 'A beautiful modern apartment in the heart of downtown with stunning city views and high-end finishes.',
   },
   {
     id: 3,
     title: 'Luxury Penthouse with Terrace',
-    price: '$4,500/month',
+    price: '$2,250,000',
     bedrooms: 3,
     bathrooms: 3,
     area: '2,100 sq ft',
     location: 'Riverside, East End',
-    image: '/property-3.jpg',
+    image: 'https://view.com.au/viewstatic/images/listing/3-bedroom-apartment-in-bondi-nsw-2026/500-w/16570962-1-C20F2A2.jpg',
     description: 'Exclusive penthouse with a private terrace, panoramic views, and premium amenities including a gym and pool.',
   }
 ];

@@ -1,147 +1,165 @@
 'use client';
 
-import React from 'react';
-import { HeartIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import React, { useState } from 'react';
+import { Property } from '@/types/property';
+import Image from 'next/image';
+import { HeartIcon as HeartIconOutline, XMarkIcon } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-
-interface Property {
-  id: number;
-  title: string;
-  price: string;
-  bedrooms: number;
-  bathrooms: number;
-  area: string;
-  location: string;
-  image: string;
-  description: string;
-}
+import { Dialog } from '@headlessui/react';
+import { 
+  HomeIcon, 
+  HomeModernIcon,
+  TruckIcon,
+  Square3Stack3DIcon,
+  StarIcon,
+  ChartBarIcon,
+  ClipboardDocumentIcon,
+  MapPinIcon
+} from '@heroicons/react/24/outline';
 
 interface PropertyCardProps {
   property: Property;
-  onLike: () => void;
-  onDislike: () => void;
+  showActions?: boolean;
+  isSaved?: boolean;
+  onLike?: (listing_id: string) => void;
+  onDislike?: (listing_id: string) => void;
 }
 
-export default function PropertyCard({ property, onLike, onDislike }: PropertyCardProps) {
-  const [liked, setLiked] = useState(false);
-  const [disliked, setDisliked] = useState(false);
-  
-  const handleLike = () => {
-    if (!liked && !disliked) {
-      setLiked(true);
-      onLike();
-    }
-  };
-  
-  const handleDislike = () => {
-    if (!liked && !disliked) {
-      setDisliked(true);
-      onDislike();
-    }
-  };
-  
-  return (
-    <motion.div 
-      initial={{ scale: 0.95, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      className="overflow-hidden rounded-[16px] bg-white shadow-[0_2px_15px_rgba(0,0,0,0.04)] mb-5"
-    >
+export default function PropertyCard({ 
+  property, 
+  showActions = false,
+  isSaved = false,
+  onLike,
+  onDislike
+}: PropertyCardProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const CardContent = ({ isDialog = false }: { isDialog?: boolean }) => (
+    <div className={`bg-white rounded-xl shadow-sm overflow-hidden transition-all duration-200 ${!isDialog && 'hover:shadow-md'}`}>
       {/* Property Image */}
-      <div className="relative h-60 w-full bg-gray-50 overflow-hidden">
-        {/* Property Image with fallback */}
-        <div className="absolute inset-0">
-          <img 
-            src={property.image} 
-            alt={property.title} 
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              // Fallback to a placeholder if image fails to load
-              (e.target as HTMLImageElement).src = 'image_not_available.png';
-            }}
-          />
+      <div className="relative h-48 w-full">
+        <img
+          src={property.media.main_image_url || '/placeholder-house.jpg'}
+          alt={property.basic_info.full_address}
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/50 to-transparent">
+          <div className="text-white font-semibold text-lg">
+            ${property.basic_info.price_value?.toLocaleString() || 'Price on request'}
+          </div>
         </div>
-        
-        {/* Price Tag */}
-        <div className="absolute top-4 right-4 bg-gradient-to-br from-gray-800 to-black px-3.5 py-1.5 rounded-full text-sm font-medium text-white shadow-[0_2px_10px_rgba(0,0,0,0.2)]">
-          {property.price}
-        </div>
+        {showActions && (
+          <div className="absolute top-4 right-4 flex gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                isSaved ? onDislike?.(property.listing_id) : onLike?.(property.listing_id);
+              }}
+              className="p-2 rounded-full bg-white/90 hover:bg-white transition-colors duration-200"
+            >
+              {isSaved ? (
+                <HeartIconSolid className="w-5 h-5 text-red-500" />
+              ) : (
+                <HeartIconOutline className="w-5 h-5 text-gray-600" />
+              )}
+            </button>
+          </div>
+        )}
       </div>
-      
+
       {/* Property Details */}
-      <div className="p-5">
-        <h3 className="text-lg font-semibold mb-1 text-gray-900">{property.title}</h3>
-        <p className="text-gray-500 text-sm mb-4 flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-          </svg>
-          {property.location}
-        </p>
-        
-        {/* Property Specs */}
-        <div className="flex gap-6 text-sm py-4 mb-4 border-t border-b border-gray-100">
-          <div className="flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1.5 text-gray-500">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-            </svg>
-            <span className="font-medium text-gray-900">{property.bedrooms}</span>
-            <span className="ml-1 text-gray-500">Beds</span>
+      <div className="p-4">
+        <h3 className="font-semibold text-gray-900 mb-2">
+          {property.basic_info.full_address}
+        </h3>
+
+        {/* Specifications */}
+        <div className="flex flex-wrap gap-4 mb-4 text-gray-600">
+          <div className="flex items-center gap-1">
+            <HomeIcon className="w-4 h-4" />
+            <span>{property.basic_info.bedrooms_count} beds</span>
           </div>
-          <div className="flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1.5 text-gray-500">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="font-medium text-gray-900">{property.bathrooms}</span>
-            <span className="ml-1 text-gray-500">Baths</span>
+          <div className="flex items-center gap-1">
+            <HomeModernIcon className="w-4 h-4" />
+            <span>{property.basic_info.bathrooms_count} baths</span>
           </div>
-          <div className="flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1.5 text-gray-500">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
-            </svg>
-            <span className="font-medium text-gray-900">{property.area}</span>
+          <div className="flex items-center gap-1">
+            <TruckIcon className="w-4 h-4" />
+            <span>{property.basic_info.car_parks} cars</span>
           </div>
+          {property.basic_info.land_size && (
+            <div className="flex items-center gap-1">
+              <Square3Stack3DIcon className="w-4 h-4" />
+              <span>{property.basic_info.land_size}m²</span>
+            </div>
+          )}
         </div>
-        
-        <p className="text-gray-600 text-sm mb-5 line-clamp-2">{property.description}</p>
-        
-        {/* Action Buttons */}
-        <div className="flex justify-between items-center">
-          <motion.button 
-            onClick={handleDislike} 
-            disabled={liked || disliked}
-            whileTap={{ scale: 0.97 }}
-            className={`flex items-center justify-center h-10 px-5 rounded-full transition-all duration-300 ${
-              disliked
-                ? 'bg-gray-100 text-gray-600'
-                : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-            } ${(liked || disliked) && !disliked ? 'opacity-40 cursor-not-allowed' : ''}`}
-          >
-            <XMarkIcon className="h-4 w-4 mr-1.5" />
-            <span className="text-sm font-medium">Not for me</span>
-          </motion.button>
-          
-          <motion.button 
-            onClick={handleLike} 
-            disabled={liked || disliked}
-            whileTap={{ scale: 0.97 }}
-            className={`flex items-center justify-center h-10 px-5 rounded-full transition-all duration-300 ${
-              liked
-                ? 'bg-gradient-to-br from-gray-800 to-black text-white'
-                : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-            } ${(liked || disliked) && !liked ? 'opacity-40 cursor-not-allowed' : ''}`}
-          >
-            {liked ? (
-              <HeartIconSolid className="h-4 w-4 mr-1.5 text-white" />
-            ) : (
-              <HeartIcon className="h-4 w-4 mr-1.5" />
+
+        {/* Recommendation Score */}
+        {property.recommendation && (
+          <div className="mb-4">
+            <div className="flex items-center gap-2 text-gray-700 mb-2">
+              <StarIcon className="w-5 h-5" />
+              <span className="font-medium">Match Score: {Math.round(property.recommendation.score * 100)}%</span>
+            </div>
+            {property.recommendation.highlights && property.recommendation.highlights.length > 0 && (
+              <div className="space-y-2">
+                {property.recommendation.highlights.map((highlight, index) => (
+                  <div key={index} className="flex items-start gap-2 text-sm text-gray-600">
+                    <ChartBarIcon className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span>{highlight}</span>
+                  </div>
+                ))}
+              </div>
             )}
-            <span className="text-sm font-medium">{liked ? 'Liked' : 'Like'}</span>
-          </motion.button>
-        </div>
+          </div>
+        )}
+
+        {/* Notes */}
+        {property.recommendation?.explanation && (
+          <div className="text-sm text-gray-600">
+            <div className="flex items-start gap-2">
+              <ClipboardDocumentIcon className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>{property.recommendation.explanation}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Location */}
+        {isDialog && property.basic_info.suburb && (
+          <div className="mt-4 text-sm text-gray-600">
+            <div className="flex items-start gap-2">
+              <MapPinIcon className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>{property.basic_info.suburb}, {property.basic_info.state} {property.basic_info.postcode}</span>
+            </div>
+          </div>
+        )}
       </div>
-    </motion.div>
+    </div>
+  );
+
+  return (
+    <>
+      <div 
+        onClick={() => setIsOpen(true)}
+        className="cursor-pointer"
+      >
+        <CardContent />
+      </div>
+
+      <Dialog
+        open={isOpen}
+        onClose={() => setIsOpen(false)}
+        className="relative z-50"
+      >
+        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="mx-auto max-w-2xl w-full">
+            <CardContent isDialog={true} />
+          </Dialog.Panel>
+        </div>
+      </Dialog>
+    </>
   );
 } 

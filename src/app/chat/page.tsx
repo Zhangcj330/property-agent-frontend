@@ -8,15 +8,53 @@ import { mockPropertyApiResponse } from '@/mocks/propertyApiResponse';
 
 // Property interface
 interface Property {
-  id: number;
-  title: string;
-  price: string;
-  bedrooms: number;
-  bathrooms: number;
-  area: string;
-  location: string;
-  image: string;
-  description: string;
+  listing_id: string;
+  basic_info: {
+    price_value: number;
+    price_is_numeric: boolean;
+    full_address: string;
+    street_address: string;
+    suburb: string;
+    state: string;
+    postcode: string;
+    bedrooms_count: number;
+    bathrooms_count: number;
+    car_parks: string;
+    land_size: string;
+    property_type: string;
+  };
+  media: {
+    image_urls: string[];
+    main_image_url: string;
+    video_url: string;
+  };
+  agent: {
+    agent_name: string;
+    agency: string;
+    contact_number: string;
+    email: string;
+  };
+  events: {
+    inspection_date: string;
+    inspection_times: string[];
+    auction_date: string;
+    listing_date: string;
+    last_updated_date: string;
+  };
+  metadata: {
+    created_at: string;
+    updated_at: string;
+    last_analysis_at: string;
+    source: string;
+    status: string;
+  };
+  analysis: Record<string, unknown>;
+  recommendation?: {
+    score: number;
+    highlights: string[];
+    concerns: string[];
+    explanation: string;
+  };
 }
 
 // Message types
@@ -35,6 +73,7 @@ interface ChatRequest {
   user_input: string;
   preferences?: Record<string, string>;
   search_params?: Record<string, string>;
+  recommendation_history?: string[]; // List of property IDs
 }
 
 interface ChatResponse {
@@ -42,20 +81,16 @@ interface ChatResponse {
   response: string;
   preferences?: Record<string, string>;
   search_params?: Record<string, string>;
-  is_complete: boolean;
+  recommendation_history?: string[];
+  latest_recommendation?: PropertyRecommendationResponse;
 }
 
 interface PropertyRecommendationResponse {
-  properties: Property[];
-}
-
-// API Response interfaces
-interface PropertyApiResponse {
-  properties: {
+  properties: Array<{
     property: {
       listing_id: string;
       basic_info: {
-        price_value: number;
+        price_value: number | null;
         price_is_numeric: boolean;
         full_address: string;
         street_address: string;
@@ -70,30 +105,21 @@ interface PropertyApiResponse {
       };
       media: {
         image_urls: string[];
-        main_image_url: string;
-        video_url: string;
       };
       agent: {
         agent_name: string;
-        agency: string;
-        contact_number: string;
-        email: string;
       };
       events: {
-        inspection_date: string;
-        inspection_times: string[];
-        auction_date: string;
-        listing_date: string;
-        last_updated_date: string;
+        inspection_date: string | null;
+        auction_date: string | null;
       };
       metadata: {
         created_at: string;
         updated_at: string;
-        last_analysis_at: string;
         source: string;
         status: string;
       };
-      analysis: Record<string, unknown>;
+      analysis: any | null;
     };
     recommendation: {
       score: number;
@@ -101,7 +127,7 @@ interface PropertyApiResponse {
       concerns: string[];
       explanation: string;
     };
-  }[];
+  }>;
 }
 
 // Client-side only counter for generating unique IDs
@@ -123,31 +149,57 @@ const getOrCreateSessionId = () => {
 };
 
 // Transform API response to Property interface
-const transformPropertyData = (apiProperty: PropertyApiResponse['properties'][0]): Property => {
-  const { property, recommendation } = apiProperty;
-  const { basic_info, media } = property;
-
-  // Format price to string with currency
-  const formatPrice = (value: number, isNumeric: boolean): string => {
-    if (!isNumeric) return 'Price on application';
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: 'AUD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
+const transformPropertyData = (propertyWithRecommendation: PropertyRecommendationResponse['properties'][0]): Property => {
+  const { property, recommendation } = propertyWithRecommendation;
+  
   return {
-    id: parseInt(property.listing_id, 10) || Math.floor(Math.random() * 1000000), // Fallback to random ID if not numeric
-    title: `${basic_info.property_type} in ${basic_info.suburb}`,
-    price: formatPrice(basic_info.price_value, basic_info.price_is_numeric),
-    bedrooms: basic_info.bedrooms_count,
-    bathrooms: basic_info.bathrooms_count,
-    area: basic_info.land_size,
-    location: basic_info.full_address,
-    image: media.main_image_url,
-    description: `${recommendation.explanation}\n\nHighlights:\n${recommendation.highlights.join('\n')}`
+    listing_id: property.listing_id,
+    basic_info: {
+      price_value: property.basic_info.price_value || 0,
+      price_is_numeric: property.basic_info.price_is_numeric,
+      full_address: property.basic_info.full_address,
+      street_address: property.basic_info.street_address,
+      suburb: property.basic_info.suburb,
+      state: property.basic_info.state,
+      postcode: property.basic_info.postcode,
+      bedrooms_count: property.basic_info.bedrooms_count,
+      bathrooms_count: property.basic_info.bathrooms_count,
+      car_parks: property.basic_info.car_parks,
+      land_size: property.basic_info.land_size,
+      property_type: property.basic_info.property_type,
+    },
+    media: {
+      image_urls: property.media.image_urls,
+      main_image_url: property.media.image_urls[0] || '/placeholder-property.jpg',
+      video_url: '',
+    },
+    agent: {
+      agent_name: property.agent.agent_name,
+      agency: '',
+      contact_number: '',
+      email: '',
+    },
+    events: {
+      inspection_date: property.events.inspection_date || '',
+      inspection_times: [],
+      auction_date: property.events.auction_date || '',
+      listing_date: '',
+      last_updated_date: property.metadata.updated_at,
+    },
+    metadata: {
+      created_at: property.metadata.created_at,
+      updated_at: property.metadata.updated_at,
+      last_analysis_at: '',
+      source: property.metadata.source,
+      status: property.metadata.status,
+    },
+    analysis: property.analysis || {},
+    recommendation: {
+      score: recommendation.score,
+      highlights: recommendation.highlights,
+      concerns: recommendation.concerns,
+      explanation: recommendation.explanation,
+    },
   };
 };
 
@@ -163,6 +215,7 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [preferences, setPreferences] = useState<Record<string, string>>({});
   const [searchParams, setSearchParams] = useState<Record<string, string>>({});
+  const [savedProperties, setSavedProperties] = useState<Set<string>>(new Set());
   const messageEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -175,35 +228,66 @@ export default function ChatPage() {
     setSessionId(currentSessionId);
   }, []);
 
+  // Initialize saved properties from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('savedProperties');
+    if (saved) {
+      setSavedProperties(new Set(JSON.parse(saved)));
+    }
+  }, []);
+
+  // Save properties to localStorage when updated
+  useEffect(() => {
+    localStorage.setItem('savedProperties', JSON.stringify(Array.from(savedProperties)));
+  }, [savedProperties]);
+
   // Call API to get response
   const handleApiCall = useCallback(async (userInput: string) => {
     setIsLoading(true);
 
     try {
-      // Simulate API response delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Mock chat response
-      const data: ChatResponse = {
-        session_id: sessionId || 'mock-session',
-        response: `I understand you're looking for a property. Let me help you find some suitable options based on your requirements: "${userInput}"`,
-        preferences: {
-          location: 'Bondi Beach',
-          price_range: '1000000-2000000',
-          property_type: 'apartment'
-        },
-        search_params: {
-          bedrooms: '2+',
-          bathrooms: '2+'
-        },
-        is_complete: true
+      const chatRequest: ChatRequest = {
+        session_id: sessionId || undefined,
+        user_input: userInput,
+        preferences,
+        search_params: searchParams,
+        recommendation_history: messages
+          .filter(m => m.type === 'property' && m.property)
+          .map(m => m.property!.listing_id)
       };
+
+      console.log('Sending request:', JSON.stringify(chatRequest, null, 2));
+
+      const response = await fetch('http://localhost:8000/api/v1/agent/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(chatRequest),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        });
+        throw new Error(`Chat API failed with status ${response.status}. Details: ${errorText}`);
+      }
+
+      const data: ChatResponse = await response.json();
+      console.log('Full API Response:', JSON.stringify(data, null, 2));
+      console.log('Response text:', data.response);
+      console.log('Latest recommendations:', JSON.stringify(data.latest_recommendation, null, 2));
       
       // Save updated preferences and search parameters
       if (data.preferences) {
+        console.log('Updated preferences:', data.preferences);
         setPreferences(data.preferences);
       }
       if (data.search_params) {
+        console.log('Updated search params:', data.search_params);
         setSearchParams(data.search_params);
       }
 
@@ -216,58 +300,50 @@ export default function ChatPage() {
       
       setMessages((prev) => [...prev, assistantMessage]);
 
-      // If chat is complete, use mock property recommendations
-      if (data.is_complete && data.preferences && data.search_params) {
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Use mock data directly
-        const recommendData = mockPropertyApiResponse;
-        
+      // If there are latest recommendations, show them
+      if (data.latest_recommendation?.properties) {
+        console.log('Number of properties:', data.latest_recommendation.properties.length);
         // Add each property as a message
-        for (const propertyItem of recommendData.properties) {
-          const transformedProperty = transformPropertyData(propertyItem);
+        for (const propertyWithRecommendation of data.latest_recommendation.properties) {
+          console.log('Processing property:', JSON.stringify(propertyWithRecommendation, null, 2));
+          const transformedProperty = transformPropertyData(propertyWithRecommendation);
+          console.log('Transformed property:', JSON.stringify(transformedProperty, null, 2));
           const propertyMessage: Message = {
             id: generateUniqueId(),
             type: 'property',
             content: 'Here\'s a property that matches your criteria:',
             property: transformedProperty
           };
+          
+          console.log('Adding property message:', JSON.stringify(propertyMessage, null, 2));
           setMessages((prev) => [...prev, propertyMessage]);
         }
 
-        // Add summary message if there are properties
-        if (recommendData.properties.length > 0) {
-          const summaryMessage: Message = {
-            id: generateUniqueId(),
-            type: 'assistant',
-            content: `I've found ${recommendData.properties.length} properties that match your criteria. Each property has been carefully selected based on your preferences. Would you like me to explain more about any of these properties?`
-          };
-          setMessages((prev) => [...prev, summaryMessage]);
-        } else {
-          const noResultsMessage: Message = {
-            id: generateUniqueId(),
-            type: 'assistant',
-            content: 'I couldn\'t find any properties matching your exact criteria. Would you like to adjust your preferences to see more options?'
-          };
-          setMessages((prev) => [...prev, noResultsMessage]);
-        }
+        // Don't add summary message again since we already added the response
+      } else {
+        console.log('No recommendations found in response');
       }
     } catch (error) {
-      console.error('Error in mock flow:', error);
+      console.error('Error in chat flow:', {
+        error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       
       // Add error message
       const errorMessage: Message = {
         id: generateUniqueId(),
         type: 'assistant',
-        content: 'Sorry, I encountered an error while processing your request. Please try again later.',
+        content: error instanceof Error 
+          ? `Sorry, I encountered an error: ${error.message}. Please try again later.`
+          : 'Sorry, I encountered an error while processing your request. Please try again later.',
       };
       
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
-  }, [sessionId, preferences, searchParams]);
+  }, [sessionId, preferences, searchParams, messages]);
 
   // Handle initial message from URL
   useEffect(() => {
@@ -347,21 +423,22 @@ export default function ChatPage() {
     e.target.style.height = `${Math.min(e.target.scrollHeight, 150)}px`;
   };
 
-  // Handle property feedback
-  const handlePropertyFeedback = (propertyId: number, liked: boolean) => {
-    // Mock feedback response
-    console.log(`Mock: Property ${propertyId} ${liked ? 'liked' : 'disliked'}`);
-    
-    // Add a response based on the feedback
-    const feedbackResponse: Message = {
-      id: generateUniqueId(),
-      type: 'assistant',
-      content: liked 
-        ? 'Great! I\'ll keep that in mind for future recommendations. Would you like to see more properties like this one?' 
-        : 'Thanks for the feedback. Can you tell me what you didn\'t like about it so I can refine my recommendations?',
-    };
-    
-    setMessages((prev) => [...prev, feedbackResponse]);
+  // Handle property saving
+  const handleSaveProperty = (listing_id: string) => {
+    setSavedProperties(prev => {
+      const newSet = new Set(prev);
+      newSet.add(listing_id);
+      return newSet;
+    });
+  };
+
+  // Handle property removal from saved list
+  const handleRemoveProperty = (listing_id: string) => {
+    setSavedProperties(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(listing_id);
+      return newSet;
+    });
   };
 
   // Add function to start new chat
@@ -435,9 +512,11 @@ export default function ChatPage() {
                     </div>
                     <div className="ml-12">
                       <PropertyCard 
-                        property={message.property!} 
-                        onLike={() => handlePropertyFeedback(message.property!.id, true)}
-                        onDislike={() => handlePropertyFeedback(message.property!.id, false)}
+                        property={message.property!}
+                        showActions={true}
+                        isSaved={savedProperties.has(message.property!.listing_id)}
+                        onLike={handleSaveProperty}
+                        onDislike={handleRemoveProperty}
                       />
                     </div>
                   </div>

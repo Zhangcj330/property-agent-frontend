@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Bars3Icon, XMarkIcon, HomeIcon, ChatBubbleLeftRightIcon, HeartIcon, UserIcon } from '@heroicons/react/24/outline';
 
@@ -23,8 +24,15 @@ export default function Navigation() {
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link href="/" className="text-black dark:text-white font-bold text-xl">
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-black to-neutral-700 dark:from-white dark:to-neutral-400">PropertyAgent</span>
+              <Link href="/" className="text-black dark:text-white font-bold text-xl flex items-center gap-2">
+                <Image
+                  src="/logo.png"
+                  alt="Dataly Logo"
+                  width={128}
+                  height={128}
+                  className="w-24 h-24 object-contain pt-1"
+                />
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-black to-neutral-700 dark:from-white dark:to-neutral-400"></span>
               </Link>
             </div>
           </div>

@@ -2,6 +2,12 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import type { Components } from 'react-markdown';
+import type { ReactNode } from 'react';
+import type { ComponentPropsWithoutRef, HTMLProps } from 'react';
 import PropertyCard from '@/components/molecules/PropertyCard';
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
 import { mockPropertyApiResponse } from '@/mocks/propertyApiResponse';
@@ -49,6 +55,13 @@ interface Property {
     status: string;
   };
   analysis: Record<string, unknown>;
+  investment_info?: {
+    rental_yield: number;
+    capital_gain: number;
+    current_price: number;
+    weekly_rent: number;
+  };
+  planning_info?: Record<string, unknown>;
   recommendation?: {
     score: number;
     highlights: string[];
@@ -120,6 +133,24 @@ interface PropertyRecommendationResponse {
         status: string;
       };
       analysis: any | null;
+      investment_info?: {
+        rental_yield: number;
+        capital_gain: number;
+        current_price: number;
+        weekly_rent: number;
+      };
+      planning_info?: {
+        zone_name?: string;
+        height_limit?: string;
+        floor_space_ratio?: string;
+        min_lot_size?: string;
+        is_heritage?: boolean;
+        flood_risk?: boolean;
+        landslide_risk?: boolean;
+        zoning?: string;
+        overlays?: string[];
+        potential?: string;
+      };
     };
     recommendation: {
       score: number;
@@ -194,12 +225,19 @@ const transformPropertyData = (propertyWithRecommendation: PropertyRecommendatio
       status: property.metadata.status,
     },
     analysis: property.analysis || {},
-    recommendation: {
+    investment_info: property.investment_info ? {
+      rental_yield: property.investment_info.rental_yield,
+      capital_gain: property.investment_info.capital_gain,
+      current_price: property.investment_info.current_price,
+      weekly_rent: property.investment_info.weekly_rent,
+    } : undefined,
+    planning_info: property.planning_info || undefined,
+    recommendation: recommendation ? {
       score: recommendation.score,
       highlights: recommendation.highlights,
       concerns: recommendation.concerns,
       explanation: recommendation.explanation,
-    },
+    } : undefined,
   };
 };
 
@@ -515,15 +553,15 @@ export default function ChatPage() {
                         property={message.property!}
                         showActions={true}
                         isSaved={savedProperties.has(message.property!.listing_id)}
-                        onLike={handleSaveProperty}
-                        onDislike={handleRemoveProperty}
+                        onLike={(listing_id) => handleSaveProperty(listing_id)}
+                        onDislike={(listing_id) => handleRemoveProperty(listing_id)}
                       />
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-start max-w-[75%]">
+                  <div className="flex items-start max-w-[75%] space-x-3">
                     {message.type === 'assistant' && (
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-800 to-black flex-shrink-0 flex items-center justify-center text-white mr-3">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-800 to-black flex-shrink-0 flex items-center justify-center text-white">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 9.75a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 0 1 .778-.332 48.294 48.294 0 0 0 5.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
                         </svg>
@@ -536,10 +574,50 @@ export default function ChatPage() {
                           : 'chat-bubble-assistant bg-white shadow-[0_2px_15px_rgba(0,0,0,0.03)] text-gray-800'
                       }`}
                     >
-                      {message.content}
+                      <div className={`prose ${message.type === 'user' ? 'prose-invert' : ''} max-w-none prose-sm prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0.5 prose-pre:my-1 prose-pre:bg-gray-100/10 prose-pre:rounded-lg prose-pre:p-2`}>
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          rehypePlugins={[rehypeRaw]}
+                          components={{
+                            a: ({ children, href, ...props }: ComponentPropsWithoutRef<'a'>) => (
+                              <a 
+                                href={href}
+                                className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                {...props}
+                              >
+                                {children}
+                              </a>
+                            ),
+                            code: ({ inline, className, children, ...props }: any) => {
+                              const match = /language-(\w+)/.exec(className || '');
+                              return (
+                                <code
+                                  className={`${inline ? 'bg-gray-100/10 rounded px-1 py-0.5' : 'block bg-gray-100/10 rounded p-2 overflow-x-auto'} ${match ? `language-${match[1]}` : ''}`}
+                                  {...props}
+                                >
+                                  {children}
+                                </code>
+                              );
+                            },
+                            pre: ({ children, ...props }: ComponentPropsWithoutRef<'pre'>) => (
+                              <pre className="bg-gray-100/10 rounded-lg p-2 overflow-x-auto" {...props}>{children}</pre>
+                            ),
+                            ul: ({ children, ...props }: ComponentPropsWithoutRef<'ul'>) => (
+                              <ul className="list-disc list-inside" {...props}>{children}</ul>
+                            ),
+                            ol: ({ children, ...props }: ComponentPropsWithoutRef<'ol'>) => (
+                              <ol className="list-decimal list-inside" {...props}>{children}</ol>
+                            ),
+                          }}
+                        >
+                          {message.content}
+                        </ReactMarkdown>
+                      </div>
                     </div>
                     {message.type === 'user' && (
-                      <div className="w-9 h-9 rounded-full ml-3 overflow-hidden flex-shrink-0 bg-gray-100">
+                      <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 bg-gray-100">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-full h-full p-2 text-gray-400">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                         </svg>

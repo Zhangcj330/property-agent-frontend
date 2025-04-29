@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Property } from '@/types/property';
 import Image from 'next/image';
 import { HeartIcon as HeartIconOutline, XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
-import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
+import { HeartIcon as HeartIconSolid, EnvelopeIcon } from '@heroicons/react/24/solid';
 import { Dialog } from '@headlessui/react';
 import { 
   HomeIcon, 
@@ -54,6 +54,24 @@ export default function PropertyCard({
     e?.stopPropagation();
     setCurrentImageIndex((prevIndex) => (prevIndex - 1 + totalImages) % totalImages);
   };
+
+  const handleSaveClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    isSaved ? onDislike?.(property.listing_id) : onLike?.(property.listing_id);
+  };
+
+  const SaveButton = () => (
+    <button
+      onClick={handleSaveClick}
+      className="p-2 rounded-full bg-white/90 hover:bg-white transition-colors duration-200"
+    >
+      {isSaved ? (
+        <HeartIconSolid className="w-5 h-5 text-red-500" />
+      ) : (
+        <HeartIconOutline className="w-5 h-5 text-gray-600" />
+      )}
+    </button>
+  );
 
   const CardContent = ({ isDialog = false }: { isDialog?: boolean }) => (
     <div className={`bg-white rounded-xl shadow-sm overflow-hidden transition-all duration-200 ${!isDialog && 'hover:shadow-md'} ${!isDialog && 'h-[600px]'}`}>
@@ -109,26 +127,22 @@ export default function PropertyCard({
           </>
         )}
         
-        <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/60 to-transparent">
-          <div className="text-white font-semibold text-lg">
-            ${property.basic_info.price_value?.toLocaleString() || 'Price on request'}
-          </div>
+        <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/60 to-transparent z-20">
+          {property.basic_info.price_is_numeric === false ? (
+            <div className="flex items-center gap-2 text-white font-bold text-xl drop-shadow-lg">
+              <span>Contact agent</span>
+            </div>
+          ) : property.basic_info.price_is_numeric === true && typeof property.basic_info.price_value === 'number' ? (
+            <div className="text-white font-bold text-2xl drop-shadow-lg">
+              ${property.basic_info.price_value.toLocaleString()}
+            </div>
+          ) : (
+            <div className="text-white font-bold text-xl drop-shadow-lg">Price on request</div>
+          )}
         </div>
         {showActions && (
-          <div className="absolute top-4 right-4 flex gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                isSaved ? onDislike?.(property.listing_id) : onLike?.(property.listing_id);
-              }}
-              className="p-2 rounded-full bg-white/90 hover:bg-white transition-colors duration-200"
-            >
-              {isSaved ? (
-                <HeartIconSolid className="w-5 h-5 text-red-500" />
-              ) : (
-                <HeartIconOutline className="w-5 h-5 text-gray-600" />
-              )}
-            </button>
+          <div className="absolute top-4 right-4 flex gap-2 z-20">
+            <SaveButton />
           </div>
         )}
       </div>
@@ -504,10 +518,7 @@ export default function PropertyCard({
 
   return (
     <>
-      <div 
-        onClick={() => setIsOpen(true)}
-        className="cursor-pointer"
-      >
+      <div className="w-full max-w-lg" onClick={() => setIsOpen(true)}>
         <CardContent />
       </div>
 
@@ -516,21 +527,20 @@ export default function PropertyCard({
         onClose={() => setIsOpen(false)}
         className="relative z-50"
       >
-        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" aria-hidden="true" />
         
-        <div className="fixed inset-0 flex items-center justify-center p-4 overflow-y-auto">
-          <Dialog.Panel className="mx-auto max-w-3xl w-full bg-white rounded-xl shadow-xl transform transition-all">
-            <div className="max-h-[80vh] overflow-y-auto">
-              <CardContent isDialog={true} />
-            </div>
-            <div className="p-4 border-t border-gray-100 flex justify-end">
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="relative bg-white rounded-2xl overflow-auto max-h-[90vh] w-full max-w-4xl">
+            <div className="absolute top-4 right-4 flex items-center gap-2 z-20">
+              {showActions && <SaveButton />}
               <button
                 onClick={() => setIsOpen(false)}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium transition-colors"
+                className="p-2 rounded-full bg-white shadow-md hover:shadow-lg border border-gray-100 text-gray-400 hover:text-gray-600 transition-all duration-200"
               >
-                Close
+                <XMarkIcon className="w-5 h-5" />
               </button>
             </div>
+            <CardContent isDialog={true} />
           </Dialog.Panel>
         </div>
       </Dialog>

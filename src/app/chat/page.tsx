@@ -10,7 +10,6 @@ import type { ReactNode } from 'react';
 import type { ComponentPropsWithoutRef, HTMLProps } from 'react';
 import PropertyCard from '@/components/molecules/PropertyCard';
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
-import { mockPropertyApiResponse } from '@/mocks/propertyApiResponse';
 
 // Property interface
 interface Property {
@@ -70,6 +69,16 @@ interface Property {
   };
 }
 
+interface PropertyWithRecommendation {
+  property: Property;
+  recommendation: {
+    score: number;
+    highlights: string[];
+    concerns: string[];
+    explanation: string;
+  };
+}
+
 // Message types
 type MessageType = 'user' | 'assistant' | 'property';
 
@@ -86,7 +95,6 @@ interface ChatRequest {
   user_input: string;
   preferences?: Record<string, string>;
   search_params?: Record<string, string>;
-  recommendation_history?: string[]; // List of property IDs
 }
 
 interface ChatResponse {
@@ -94,7 +102,6 @@ interface ChatResponse {
   response: string;
   preferences?: Record<string, string>;
   search_params?: Record<string, string>;
-  recommendation_history?: string[];
   latest_recommendation?: PropertyRecommendationResponse;
 }
 
@@ -259,6 +266,54 @@ export default function ChatPage() {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const initialMessageProcessedRef = useRef(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const historyLoadedRef = useRef(false);
+
+  // 提前定义 fetchConversationHistory，避免 useEffect 前引用
+  const fetchConversationHistory = useCallback(async (sessionId: string) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/v1/conversation/${sessionId}`);
+      if (!response.ok) throw new Error('Failed to fetch conversation history');
+      const data = await response.json();
+      // 智能转换历史消息格式
+      const history: Message[] = [];
+      (data.messages || []).forEach((msg: any) => {
+        if (msg.type === 'property_recommendation' && msg.recommendation && msg.recommendation.properties) {
+          // 每个 property recommendation 生成一条 property 消息
+          msg.recommendation.properties.forEach((propertyWithRecommendation: any) => {
+            history.push({
+              id: generateUniqueId(),
+              type: 'property',
+              content: "Here's a property that matches your criteria:",
+              property: transformPropertyData(propertyWithRecommendation),
+            });
+          });
+        } else if (msg.role === 'user') {
+          history.push({
+            id: generateUniqueId(),
+            type: 'user',
+            content: msg.content,
+          });
+        } else if (msg.role === 'assistant') {
+          history.push({
+            id: generateUniqueId(),
+            type: 'assistant',
+            content: msg.content,
+          });
+        } else {
+          // fallback
+          history.push({
+            id: generateUniqueId(),
+            type: 'assistant',
+            content: msg.content,
+          });
+        }
+      });
+      return history;
+    } catch (err) {
+      console.error('Error fetching conversation history:', err);
+      return [];
+    }
+  }, []);
 
   // Initialize session ID on mount
   useEffect(() => {
@@ -279,6 +334,28 @@ export default function ChatPage() {
     localStorage.setItem('savedProperties', JSON.stringify(Array.from(savedProperties)));
   }, [savedProperties]);
 
+  // Add this effect to load saved properties when the session ID changes
+  useEffect(() => {
+    const loadSavedProperties = async () => {
+      if (!sessionId) return;
+      
+      try {
+        const response = await fetch(`http://localhost:8000/api/v1/saved_properties/${sessionId}`);
+        if (!response.ok) {
+          throw new Error(`Failed to load saved properties: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        const savedIds = new Set<string>(data.properties.map((p: PropertyWithRecommendation) => p.property.listing_id));
+        setSavedProperties(savedIds);
+      } catch (error) {
+        console.error('Error loading saved properties:', error);
+      }
+    };
+
+    loadSavedProperties();
+  }, [sessionId]);
+
   // Call API to get response
   const handleApiCall = useCallback(async (userInput: string) => {
     setIsLoading(true);
@@ -289,9 +366,6 @@ export default function ChatPage() {
         user_input: userInput,
         preferences,
         search_params: searchParams,
-        recommendation_history: messages
-          .filter(m => m.type === 'property' && m.property)
-          .map(m => m.property!.listing_id)
       };
 
       console.log('Sending request:', JSON.stringify(chatRequest, null, 2));
@@ -462,21 +536,68 @@ export default function ChatPage() {
   };
 
   // Handle property saving
-  const handleSaveProperty = (listing_id: string) => {
-    setSavedProperties(prev => {
-      const newSet = new Set(prev);
-      newSet.add(listing_id);
-      return newSet;
-    });
+  const handleSaveProperty = async (listing_id: string) => {
+    try {
+      // Find the property from messages
+      const propertyMessage = messages.find(m => 
+        m.type === 'property' && 
+        m.property?.listing_id === listing_id
+      );
+      
+      if (!propertyMessage?.property) {
+        console.error('Property not found in messages');
+        return;
+      }
+
+      const response = await fetch(`http://localhost:8000/api/v1/saved_properties/?session_id=${sessionId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          property: propertyMessage.property,
+          recommendation: propertyMessage.property.recommendation
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to save property: ${response.statusText}`);
+      }
+
+      setSavedProperties(prev => {
+        const newSet = new Set(prev);
+        newSet.add(listing_id);
+        return newSet;
+      });
+    } catch (error) {
+      console.error('Error saving property:', error);
+      // You might want to show an error toast here
+    }
   };
 
   // Handle property removal from saved list
-  const handleRemoveProperty = (listing_id: string) => {
-    setSavedProperties(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(listing_id);
-      return newSet;
-    });
+  const handleRemoveProperty = async (listing_id: string) => {
+    try {
+      const response = await fetch(
+        `http://localhost:8000/api/v1/saved_properties/${sessionId}/${listing_id}`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to remove property: ${response.statusText}`);
+      }
+
+      setSavedProperties(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(listing_id);
+        return newSet;
+      });
+    } catch (error) {
+      console.error('Error removing property:', error);
+      // You might want to show an error toast here
+    }
   };
 
   // Add function to start new chat
@@ -494,7 +615,19 @@ export default function ChatPage() {
     }]);
     setPreferences({});
     setSearchParams({});
+    historyLoadedRef.current = false;
   }, []);
+
+  // Add this effect to load conversation history when the session ID changes
+  useEffect(() => {
+    if (!sessionId || historyLoadedRef.current) return;
+    fetchConversationHistory(sessionId).then(history => {
+      if (history.length > 0) {
+        setMessages(history);
+      }
+      historyLoadedRef.current = true;
+    });
+  }, [sessionId, fetchConversationHistory]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] bg-[#f8f8f8] overflow-hidden">
@@ -548,13 +681,13 @@ export default function ChatPage() {
                       </div>
                       <div className="chat-bubble chat-bubble-assistant rounded-[18px] py-3.5 px-4 bg-white shadow-[0_2px_15px_rgba(0,0,0,0.03)] text-gray-800">{message.content}</div>
                     </div>
-                    <div className="ml-12">
+                    <div className="ml-12 relative group">
                       <PropertyCard 
                         property={message.property!}
                         showActions={true}
                         isSaved={savedProperties.has(message.property!.listing_id)}
-                        onLike={(listing_id) => handleSaveProperty(listing_id)}
-                        onDislike={(listing_id) => handleRemoveProperty(listing_id)}
+                        onLike={handleSaveProperty}
+                        onDislike={handleRemoveProperty}
                       />
                     </div>
                   </div>

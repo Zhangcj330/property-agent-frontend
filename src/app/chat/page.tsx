@@ -5,11 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
-import type { Components } from 'react-markdown';
-import type { ReactNode } from 'react';
 import type { ComponentPropsWithoutRef } from 'react';
 import PropertyCard from '@/components/molecules/PropertyCard';
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
+import { PropertyRecommendationResponse } from '@/types';
 
 // Property interface
 interface Property {
@@ -69,16 +68,6 @@ interface Property {
   };
 }
 
-interface PropertyWithRecommendation {
-  property: Property;
-  recommendation: {
-    score: number;
-    highlights: string[];
-    concerns: string[];
-    explanation: string;
-  };
-}
-
 // Message types
 type MessageType = 'user' | 'assistant' | 'property';
 
@@ -103,69 +92,6 @@ interface ChatResponse {
   preferences?: Record<string, string>;
   search_params?: Record<string, string>;
   latest_recommendation?: PropertyRecommendationResponse;
-}
-
-interface PropertyRecommendationResponse {
-  properties: Array<{
-    property: {
-      listing_id: string;
-      basic_info: {
-        price_value: number | null;
-        price_is_numeric: boolean;
-        full_address: string;
-        street_address: string;
-        suburb: string;
-        state: string;
-        postcode: string;
-        bedrooms_count: number;
-        bathrooms_count: number;
-        car_parks: string;
-        land_size: string;
-        property_type: string;
-      };
-      media: {
-        image_urls: string[];
-      };
-      agent: {
-        agent_name: string;
-      };
-      events: {
-        inspection_date: string | null;
-        auction_date: string | null;
-      };
-      metadata: {
-        created_at: string;
-        updated_at: string;
-        source: string;
-        status: string;
-      };
-      analysis: Record<string, unknown> | null;
-      investment_info?: {
-        rental_yield: number;
-        capital_gain: number;
-        current_price: number;
-        weekly_rent: number;
-      };
-      planning_info?: {
-        zone_name?: string;
-        height_limit?: string;
-        floor_space_ratio?: string;
-        min_lot_size?: string;
-        is_heritage?: boolean;
-        flood_risk?: boolean;
-        landslide_risk?: boolean;
-        zoning?: string;
-        overlays?: string[];
-        potential?: string;
-      };
-    };
-    recommendation: {
-      score: number;
-      highlights: string[];
-      concerns: string[];
-      explanation: string;
-    };
-  }>;
 }
 
 // Client-side only counter for generating unique IDs

@@ -480,7 +480,7 @@ export default function PropertyCard({
             )}
             
             {/* Planning Info */}
-            {property.planning_info && Object.entries(property.planning_info).some(([_, value]) => value !== undefined && value !== null) && (
+            {property.planning_info && Object.entries(property.planning_info).some(([, value]) => value !== undefined && value !== null) && (
               <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
                   <div className="bg-gray-100 rounded-full p-1.5 flex-shrink-0">

@@ -10,6 +10,9 @@ import PropertyCard from '@/components/molecules/PropertyCard';
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
 import { PropertyRecommendationResponse } from '@/types';
 
+// API base URL from environment variable
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+
 // Property interface
 interface Property {
   listing_id: string;
@@ -221,7 +224,7 @@ export default function ChatPage() {
       if (!sessionId || historyLoadedRef.current) return;
       
       try {
-        const response = await fetch(`http://localhost:8000/api/v1/conversation/${sessionId}`);
+        const response = await fetch(`${API_BASE_URL}/api/v1/conversation/${sessionId}`);
         if (!response.ok) {
           console.error('History fetch failed:', {
             status: response.status,
@@ -293,7 +296,7 @@ export default function ChatPage() {
 
       console.log('Sending request:', JSON.stringify(chatRequest, null, 2));
 
-      const response = await fetch('http://localhost:8000/api/v1/agent/chat', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/agent/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -472,7 +475,7 @@ export default function ChatPage() {
         return;
       }
 
-      const response = await fetch(`http://localhost:8000/api/v1/saved_properties/?session_id=${sessionId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/saved_properties/?session_id=${sessionId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -502,7 +505,7 @@ export default function ChatPage() {
   const handleRemoveProperty = async (listing_id: string) => {
     try {
       const response = await fetch(
-        `http://localhost:8000/api/v1/saved_properties/${sessionId}/${listing_id}`,
+        `${API_BASE_URL}/api/v1/saved_properties/${sessionId}/${listing_id}`,
         {
           method: 'DELETE',
         }

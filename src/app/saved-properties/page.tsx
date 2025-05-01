@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import PropertyCard from '@/components/molecules/PropertyCard';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// API base URL from environment variable
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+
 interface Property {
   listing_id: string;
   basic_info: {
@@ -92,7 +95,7 @@ export default function SavedPropertiesPage() {
         setIsLoading(true);
         setError(null);
         
-        const response = await fetch(`http://localhost:8000/api/v1/saved_properties/${sessionId}`);
+        const response = await fetch(`${API_BASE_URL}/api/v1/saved_properties/${sessionId}`);
         if (!response.ok) {
           throw new Error(`Failed to load saved properties: ${response.statusText}`);
         }
@@ -116,7 +119,7 @@ export default function SavedPropertiesPage() {
 
     try {
       const response = await fetch(
-        `http://localhost:8000/api/v1/saved_properties/${sessionId}/${listing_id}`,
+        `${API_BASE_URL}/api/v1/saved_properties/${sessionId}/${listing_id}`,
         {
           method: 'DELETE',
         }

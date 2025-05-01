@@ -7,7 +7,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import type { Components } from 'react-markdown';
 import type { ReactNode } from 'react';
-import type { ComponentPropsWithoutRef, HTMLProps } from 'react';
+import type { ComponentPropsWithoutRef } from 'react';
 import PropertyCard from '@/components/molecules/PropertyCard';
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
 
@@ -139,7 +139,7 @@ interface PropertyRecommendationResponse {
         source: string;
         status: string;
       };
-      analysis: any | null;
+      analysis: Record<string, unknown> | null;
       investment_info?: {
         rental_yield: number;
         capital_gain: number;
@@ -268,57 +268,12 @@ export default function ChatPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const historyLoadedRef = useRef(false);
 
-  // 提前定义 fetchConversationHistory，避免 useEffect 前引用
-  const fetchConversationHistory = useCallback(async (sessionId: string) => {
-    try {
-      const response = await fetch(`http://localhost:8000/api/v1/conversation/${sessionId}`);
-      if (!response.ok) throw new Error('Failed to fetch conversation history');
-      const data = await response.json();
-      // 智能转换历史消息格式
-      const history: Message[] = [];
-      (data.messages || []).forEach((msg: any) => {
-        if (msg.type === 'property_recommendation' && msg.recommendation && msg.recommendation.properties) {
-          // 每个 property recommendation 生成一条 property 消息
-          msg.recommendation.properties.forEach((propertyWithRecommendation: any) => {
-            history.push({
-              id: generateUniqueId(),
-              type: 'property',
-              content: "Here's a property that matches your criteria:",
-              property: transformPropertyData(propertyWithRecommendation),
-            });
-          });
-        } else if (msg.role === 'user') {
-          history.push({
-            id: generateUniqueId(),
-            type: 'user',
-            content: msg.content,
-          });
-        } else if (msg.role === 'assistant') {
-          history.push({
-            id: generateUniqueId(),
-            type: 'assistant',
-            content: msg.content,
-          });
-        } else {
-          // fallback
-          history.push({
-            id: generateUniqueId(),
-            type: 'assistant',
-            content: msg.content,
-          });
-        }
-      });
-      return history;
-    } catch (err) {
-      console.error('Error fetching conversation history:', err);
-      return [];
-    }
-  }, []);
-
   // Initialize session ID on mount
   useEffect(() => {
     const currentSessionId = getOrCreateSessionId();
-    setSessionId(currentSessionId);
+    if (currentSessionId) {
+      setSessionId(currentSessionId);
+    }
   }, []);
 
   // Initialize saved properties from localStorage
@@ -334,26 +289,68 @@ export default function ChatPage() {
     localStorage.setItem('savedProperties', JSON.stringify(Array.from(savedProperties)));
   }, [savedProperties]);
 
-  // Add this effect to load saved properties when the session ID changes
+  // Add this effect to load conversation history when the session ID changes
   useEffect(() => {
-    const loadSavedProperties = async () => {
-      if (!sessionId) return;
+    const loadHistory = async () => {
+      if (!sessionId || historyLoadedRef.current) return;
       
       try {
-        const response = await fetch(`http://localhost:8000/api/v1/saved_properties/${sessionId}`);
+        const response = await fetch(`http://localhost:8000/api/v1/conversation/${sessionId}`);
         if (!response.ok) {
-          throw new Error(`Failed to load saved properties: ${response.statusText}`);
+          console.error('History fetch failed:', {
+            status: response.status,
+            statusText: response.statusText
+          });
+          return;
         }
         
         const data = await response.json();
-        const savedIds = new Set<string>(data.properties.map((p: PropertyWithRecommendation) => p.property.listing_id));
-        setSavedProperties(savedIds);
+        if (data.messages && data.messages.length > 0) {
+          const history = data.messages.map((msg: {
+            type?: string;
+            recommendation?: PropertyRecommendationResponse;
+            role?: string;
+            content?: string;
+          }) => {
+            if (msg.type === 'property_recommendation' && msg.recommendation && msg.recommendation.properties) {
+              return msg.recommendation.properties.map((propertyWithRecommendation) => ({
+                id: generateUniqueId(),
+                type: 'property' as MessageType,
+                content: "Here's a property that matches your criteria:",
+                property: transformPropertyData(propertyWithRecommendation),
+              }));
+            } else if (msg.role === 'user') {
+              return {
+                id: generateUniqueId(),
+                type: 'user' as MessageType,
+                content: msg.content || '',
+              };
+            } else if (msg.role === 'assistant') {
+              return {
+                id: generateUniqueId(),
+                type: 'assistant' as MessageType,
+                content: msg.content || '',
+              };
+            }
+            return null;
+          }).flat().filter(Boolean);
+          
+          setMessages(history);
+        }
       } catch (error) {
-        console.error('Error loading saved properties:', error);
+        console.error('Error loading history:', error);
+        // 出错时至少保留初始欢迎消息
+        setMessages([{
+          id: generateUniqueId(),
+          type: 'assistant',
+          content: 'Hello! I\'m your AI property assistant. How can I help you find your dream home today?',
+        }]);
+      } finally {
+        historyLoadedRef.current = true;
       }
     };
 
-    loadSavedProperties();
+    loadHistory();
   }, [sessionId]);
 
   // Call API to get response
@@ -455,7 +452,7 @@ export default function ChatPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionId, preferences, searchParams, messages]);
+  }, [sessionId, preferences, searchParams]);
 
   // Handle initial message from URL
   useEffect(() => {
@@ -618,17 +615,6 @@ export default function ChatPage() {
     historyLoadedRef.current = false;
   }, []);
 
-  // Add this effect to load conversation history when the session ID changes
-  useEffect(() => {
-    if (!sessionId || historyLoadedRef.current) return;
-    fetchConversationHistory(sessionId).then(history => {
-      if (history.length > 0) {
-        setMessages(history);
-      }
-      historyLoadedRef.current = true;
-    });
-  }, [sessionId, fetchConversationHistory]);
-
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] bg-[#f8f8f8] overflow-hidden">
       {/* Chat Header */}
@@ -723,7 +709,7 @@ export default function ChatPage() {
                                 {children}
                               </a>
                             ),
-                            code: ({ inline, className, children, ...props }: any) => {
+                            code: ({ inline, className, children, ...props }: ComponentPropsWithoutRef<'code'> & { inline?: boolean }) => {
                               const match = /language-(\w+)/.exec(className || '');
                               return (
                                 <code

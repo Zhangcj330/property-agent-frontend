@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Property } from '@/types/property';
 import Image from 'next/image';
 import { HeartIcon as HeartIconOutline, XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
-import { HeartIcon as HeartIconSolid, EnvelopeIcon } from '@heroicons/react/24/solid';
+import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
 import { Dialog } from '@headlessui/react';
 import { 
   HomeIcon, 
@@ -12,16 +12,13 @@ import {
   TruckIcon,
   Square3Stack3DIcon,
   StarIcon,
-  ChartBarIcon,
-  ClipboardDocumentIcon,
-  MapPinIcon,
-  BeakerIcon,
-  ShieldCheckIcon,
   BuildingOfficeIcon,
   SwatchIcon,
   BanknotesIcon,
   ScaleIcon,
-  GlobeAsiaAustraliaIcon as TreeIcon
+  GlobeAsiaAustraliaIcon as TreeIcon,
+  MapPinIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline';
 
 interface PropertyCardProps {
@@ -57,7 +54,11 @@ export default function PropertyCard({
 
   const handleSaveClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    isSaved ? onDislike?.(property.listing_id) : onLike?.(property.listing_id);
+    if (isSaved) {
+      onDislike?.(property.listing_id);
+    } else {
+      onLike?.(property.listing_id);
+    }
   };
 
   const SaveButton = () => (
@@ -113,7 +114,7 @@ export default function PropertyCard({
               <ChevronRightIcon className="w-6 h-6" />
             </button>
             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex space-x-1.5 z-10">
-              {imageUrls.map((_, index) => (
+              {imageUrls.map((url, index) => (
                 <span 
                   key={index} 
                   onClick={(e) => {
@@ -399,7 +400,7 @@ export default function PropertyCard({
                   <span>Exterior Features</span>
                 </h4>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                  {Object.entries(property.analysis.exterior_features).filter(([_, value]) => 
+                  {Object.entries(property.analysis.exterior_features).filter(([, value]) => 
                     value !== undefined && value !== null && value !== ''
                   ).map(([key, value]) => (
                     <div key={key} className="flex items-center gap-2 text-sm">

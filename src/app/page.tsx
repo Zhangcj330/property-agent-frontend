@@ -133,7 +133,7 @@ export default function Home() {
                     <span className={`transition-transform duration-200 ${searchQuery ? 'group-hover:scale-105' : ''}`}>
                       Send
                     </span>
-                    <PaperAirplaneIcon className={`w-4 h-4 transform rotate-90 transition-transform duration-200 ${searchQuery ? 'group-hover:scale-105' : ''}`} />
+                    <PaperAirplaneIcon className={`w-4 h-4 transform transition-transform duration-200 ${searchQuery ? 'group-hover:scale-105' : ''}`} />
                   </button>
                 </div>
               </div>

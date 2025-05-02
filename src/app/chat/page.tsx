@@ -8,7 +8,9 @@ import rehypeRaw from 'rehype-raw';
 import type { ComponentPropsWithoutRef } from 'react';
 import PropertyCard from '@/components/molecules/PropertyCard';
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
+import { ChatBubbleBottomCenterTextIcon } from '@heroicons/react/24/outline';
 import { PropertyRecommendationResponse } from '@/types';
+import FeedbackModal from '@/components/molecules/FeedbackModal';
 
 // API base URL from environment variable
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
@@ -196,6 +198,7 @@ export default function ChatPage() {
   const initialMessageProcessedRef = useRef(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const historyLoadedRef = useRef(false);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
   // Initialize session ID on mount
   useEffect(() => {
@@ -544,6 +547,11 @@ export default function ChatPage() {
     historyLoadedRef.current = false;
   }, []);
 
+  // Toggle feedback modal
+  const toggleFeedbackModal = () => {
+    setIsFeedbackModalOpen(!isFeedbackModalOpen);
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] bg-[#f8f8f8] overflow-hidden">
       {/* Chat Header */}
@@ -560,13 +568,22 @@ export default function ChatPage() {
               <p className="text-xs text-gray-500 font-medium">Online • Replies instantly</p>
             </div>
           </div>
-          {/* Add New Chat Button */}
-          <button
-            onClick={startNewChat}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-full shadow-sm hover:bg-gray-50 border border-gray-200 transition-all duration-200 hover:shadow-md"
-          >
-            New Chat
-          </button>
+          {/* Add New Chat Button and Feedback Button */}
+          <div className="flex space-x-3">
+            <button
+              onClick={toggleFeedbackModal}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-full shadow-sm hover:bg-gray-50 border border-gray-200 transition-all duration-200 hover:shadow-md flex items-center space-x-1"
+            >
+              <ChatBubbleBottomCenterTextIcon className="w-4 h-4 mr-1" />
+              Feedback
+            </button>
+            <button
+              onClick={startNewChat}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-full shadow-sm hover:bg-gray-50 border border-gray-200 transition-all duration-200 hover:shadow-md"
+            >
+              New Chat
+            </button>
+          </div>
         </div>
       </header>
 
@@ -733,6 +750,13 @@ export default function ChatPage() {
           </div>
         </form>
       </div>
+
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={isFeedbackModalOpen}
+        onClose={toggleFeedbackModal}
+        sessionId={sessionId}
+      />
     </div>
   );
 } 

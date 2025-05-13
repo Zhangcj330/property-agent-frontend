@@ -141,7 +141,7 @@ export default function PropertyCard({
             <div className="text-white font-bold text-xl drop-shadow-lg">Price on request</div>
           )}
         </div>
-        {showActions && (
+        {!isDialog && showActions && (
           <div className="absolute top-4 right-4 flex gap-2 z-20">
             <SaveButton />
           </div>
@@ -532,10 +532,13 @@ export default function PropertyCard({
         
         <div className="fixed inset-0 flex items-center justify-center p-4">
           <Dialog.Panel className="relative bg-white rounded-2xl overflow-auto max-h-[90vh] w-full max-w-4xl">
-            <div className="absolute top-4 right-4 flex items-center gap-2 z-20">
-              {showActions && <SaveButton />}
+            <div className="absolute top-4 right-4 flex items-center gap-2 z-50">
+              <SaveButton />
               <button
-                onClick={() => setIsOpen(false)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsOpen(false);
+                }}
                 className="p-2 rounded-full bg-white shadow-md hover:shadow-lg border border-gray-100 text-gray-400 hover:text-gray-600 transition-all duration-200"
               >
                 <XMarkIcon className="w-5 h-5" />

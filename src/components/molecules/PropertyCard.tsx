@@ -130,15 +130,15 @@ export default function PropertyCard({
         
         <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/60 to-transparent z-20">
           {property.basic_info.price_is_numeric === false ? (
-            <div className="flex items-center gap-2 text-white font-bold text-xl drop-shadow-lg">
+            <div className="flex items-center gap-2 text-white font-bold text-lg drop-shadow-lg">
               <span>Contact agent</span>
             </div>
           ) : property.basic_info.price_is_numeric === true && typeof property.basic_info.price_value === 'number' ? (
-            <div className="text-white font-bold text-2xl drop-shadow-lg">
+            <div className="text-white font-bold text-xl drop-shadow-lg">
               ${property.basic_info.price_value.toLocaleString()}
             </div>
           ) : (
-            <div className="text-white font-bold text-xl drop-shadow-lg">Price on request</div>
+            <div className="text-white font-bold text-lg drop-shadow-lg">Price on request</div>
           )}
         </div>
         {!isDialog && showActions && (

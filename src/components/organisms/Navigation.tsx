@@ -26,7 +26,7 @@ export default function Navigation() {
             <div className="flex-shrink-0 flex items-center">
               <Link href="/" className="text-black dark:text-white font-bold text-xl flex items-center gap-2">
                 <Image
-                  src="/logo.png"
+                  src="/property agent logo.png"
                   alt="Dataly Logo"
                   width={128}
                   height={128}

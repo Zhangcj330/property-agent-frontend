@@ -15,12 +15,12 @@ export const metadata: Metadata = {
   description: "Modern property recommendation platform with AI-powered chat assistance",
   icons: {
     icon: [
-      { url: '/Dataly back brandmark.png', sizes: '32x32' },
-      { url: '/Dataly back brandmark.png', sizes: '16x16' },
+      { url: '/brickAI.png', sizes: '64x64' },
+      { url: '/brickAI.png', sizes: '32x32' },
     ],
     apple: [
-      { url: '/Dataly back brandmark.png' },
-      { url: '/Dataly back brandmark.png', sizes: '180x180', type: 'image/png' },
+      { url: '/brickAI.png' },
+      { url: '/brickAI.png', sizes: '180x180', type: 'image/png' },
     ],
   },
 };

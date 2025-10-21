@@ -9,7 +9,7 @@ import type { ComponentPropsWithoutRef } from 'react';
 import PropertyCard from '@/components/molecules/PropertyCard';
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
 import { ChatBubbleBottomCenterTextIcon } from '@heroicons/react/24/outline';
-import { PropertyRecommendationResponse } from '@/types';
+import { PropertyRecommendationResponse } from '@/types/apiResponses';
 import FeedbackModal from '@/components/molecules/FeedbackModal';
 
 // API base URL from environment variable

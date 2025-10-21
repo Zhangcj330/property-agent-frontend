@@ -5,17 +5,28 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Bars3Icon, XMarkIcon, HomeIcon, ChatBubbleLeftRightIcon, HeartIcon, UserIcon } from '@heroicons/react/24/outline';
+import { useAuth } from '@/contexts/AuthContext';
+import AuthButton from '@/components/auth/AuthButton';
 
 const navItems = [
   { name: 'Home', href: '/', icon: HomeIcon },
   { name: 'Chat', href: '/chat', icon: ChatBubbleLeftRightIcon },
   { name: 'Saved Properties', href: '/saved-properties', icon: HeartIcon },
-  { name: 'Profile', href: '/profile', icon: UserIcon },
+  { name: 'Profile', href: '/profile', icon: UserIcon, requireAuth: true },
 ];
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
+  const { isAuthenticated } = useAuth();
+
+  // 过滤导航项目 - 根据认证状态显示
+  const filteredNavItems = navItems.filter(item => {
+    if (item.requireAuth && !isAuthenticated) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <nav className="bg-white/90 dark:bg-black/90 border-b border-neutral-100 dark:border-neutral-800 shadow-sm backdrop-blur-xl backdrop-saturate-150 sticky top-0 z-20">
@@ -38,8 +49,8 @@ export default function Navigation() {
           </div>
 
           {/* Desktop Menu */}
-          <div className="hidden sm:flex sm:space-x-8">
-            {navItems.map((item) => {
+          <div className="hidden sm:flex sm:items-center sm:space-x-8">
+            {filteredNavItems.map((item) => {
               const isActive = pathname === item.href;
               const Icon = item.icon;
               
@@ -58,6 +69,9 @@ export default function Navigation() {
                 </Link>
               );
             })}
+            
+            {/* 认证按钮 */}
+            <AuthButton />
           </div>
 
           {/* Mobile menu button */}
@@ -81,7 +95,7 @@ export default function Navigation() {
       {/* Mobile menu */}
       <div className={`${isOpen ? 'block' : 'hidden'} sm:hidden relative z-10`}>
         <div className="pt-2 pb-3 space-y-1 bg-white/95 dark:bg-black/95 backdrop-blur-xl">
-          {navItems.map((item) => {
+          {filteredNavItems.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
             
@@ -101,6 +115,11 @@ export default function Navigation() {
               </Link>
             );
           })}
+          
+          {/* 移动端认证按钮 */}
+          <div className="px-3 py-3 border-t border-neutral-200 dark:border-neutral-700">
+            <AuthButton />
+          </div>
         </div>
       </div>
     </nav>

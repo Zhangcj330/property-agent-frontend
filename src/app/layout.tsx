@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Navigation from "@/components/organisms/Navigation";
 import ClientFooter from "@/components/organisms/ClientFooter";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -33,9 +34,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} font-sans antialiased min-h-screen flex flex-col`} suppressHydrationWarning>
-        <Navigation />
-        <main className="flex-grow">{children}</main>
-        <ClientFooter />
+        <AuthProvider>
+          <Navigation />
+          <main className="flex-grow">{children}</main>
+          <ClientFooter />
+        </AuthProvider>
       </body>
     </html>
   );
